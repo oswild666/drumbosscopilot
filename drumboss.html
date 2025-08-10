@@ -777,13 +777,13 @@
     return { in:lpf, out };
   }
 
-  function pitchMul(track){
-    const semis = track.params.pitchSemis||0;
+  function pitchMul(params){
+    const semis = params.pitchSemis||0;
     return Math.pow(2, semis/12);
   }
 
-  function effectiveFM(track, fallbackDepth=0, fallbackRate=0){
-    const p = track.params;
+  function effectiveFM(params, fallbackDepth=0, fallbackRate=0){
+    const p = params;
     const depth = (p.fmDepthG && p.fmDepthG>0) ? p.fmDepthG : (p.fmDepth || fallbackDepth);
     const rate  = (p.fmRateG  && p.fmRateG>0)  ? p.fmRateG  : (p.fmRate  || fallbackRate);
     const feedback = p.fmFeedback || 0;
@@ -837,7 +837,7 @@
 
   function playBell(track, when, vel){
     const p = applyModulations(track);
-    const mul = pitchMul(track);
+    const mul = pitchMul(p);
     const dur = Math.min(p.decay, 6.0);
     const bus = audioCtx.createGain();
 
@@ -848,7 +848,7 @@
     car.type='sine';
     car.frequency.setValueAtTime(p.freq*mul, when);
 
-    const {depth, rate, feedback} = effectiveFM(track, p.modIndex, p.freq * p.ratio);
+    const {depth, rate, feedback} = effectiveFM(p, p.modIndex, p.freq * p.ratio);
     mod.type='sine';
     const modFreq = (p.freq*mul) * p.ratio;
     mod.frequency.setValueAtTime(rate>0 ? rate : modFreq, when);
@@ -881,7 +881,7 @@
 
   function playSnare(track, when, vel){
     const p = applyModulations(track);
-    const mul = pitchMul(track);
+    const mul = pitchMul(p);
     const bus = audioCtx.createGain();
 
     const body = audioCtx.createOscillator();
@@ -890,7 +890,7 @@
 
     const fm = audioCtx.createOscillator();
     const fmGain = audioCtx.createGain();
-    const eff = effectiveFM(track, p.fmDepth, p.fmRate);
+    const eff = effectiveFM(p, p.fmDepth, p.fmRate);
     fm.type = 'sine';
     fm.frequency.setValueAtTime(Math.max(1, eff.rate), when);
     fmGain.gain.setValueAtTime(Math.max(0, eff.depth), when);
@@ -938,7 +938,7 @@
 
   function playKick(track, when, vel){
     const p = applyModulations(track);
-    const mul = pitchMul(track);
+    const mul = pitchMul(p);
     const bus = audioCtx.createGain();
 
     const osc = audioCtx.createOscillator(); osc.type='sine';
@@ -949,7 +949,7 @@
     osc.frequency.setValueAtTime(Math.max(20, startF), when);
     osc.frequency.exponentialRampToValueAtTime(Math.max(20, endF), when + decay);
 
-    const eff = effectiveFM(track, p.fmDepth, p.fmRate);
+    const eff = effectiveFM(p, p.fmDepth, p.fmRate);
     const fm = audioCtx.createOscillator(); fm.type='sine';
     fm.frequency.setValueAtTime(Math.max(1, eff.rate), when);
     const fmGain = audioCtx.createGain();
