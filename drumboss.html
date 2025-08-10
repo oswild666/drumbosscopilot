@@ -53,6 +53,13 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
   .grid2 label{justify-content:space-between;}
   input[type="range"].wide{width:140px;}
+  .card.selectable-param {
+    outline: 2px dashed var(--hilite2);
+    cursor: pointer;
+  }
+  .card.selectable-param .grid2 label:hover {
+    background: var(--hilite);
+  }
 </style>
 </head>
 <body>
@@ -149,13 +156,53 @@
     nextTime:0,
     swingFirst:true, // первая 16‑я в паре
     // Pattern: velocity per step (0..1). 0 = off
-    pattern:Array(32).fill(0),
+    modulations: {
+      velocity: Array(32).fill(0)
+    },
+    // UI state for modulation
+    isModSelectionMode: false,
+    currentModulationView: 'velocity',
     // Instrument params + channel params + choke group
     params: instrumentDefaults(t)
   }));
 
   // Lazy noise buffer
   let noiseBuffer = null;
+
+  const paramInfo = {
+    pitchSemis: { min: -24, max: 24, default: 0 },
+    cutoff: { min: 200, max: 20000, default: 20000 },
+    resonance: { min: 0.1, max: 12, default: 0.7 },
+    fmDepthG: { min: 0, max: 800, default: 0 },
+    fmRateG: { min: 0, max: 2000, default: 0 },
+    fmFeedback: { min: 0, max: 800, default: 0 },
+    rmAmt: { min: 0, max: 1, default: 0 },
+    rmRate: { min: 0.1, max: 2000, default: 30 },
+    gain: { min: 0, max: 1.5, default: 1.0 },
+    // Hat
+    decay: { min: 0.01, max: 2.0, default: 0.5 },
+    bpFreq: { min: 1000, max: 15000, default: 8000 },
+    bpQ: { min: 0.1, max: 10, default: 1.0 },
+    hpFreq: { min: 1000, max: 15000, default: 5000 },
+    tone: { min: 0.1, max: 1.0, default: 0.7 },
+    // Bell
+    freq: { min: 100, max: 2000, default: 600 },
+    ratio: { min: 0.1, max: 5, default: 2 },
+    modIndex: { min: 10, max: 2000, default: 600 },
+    // Snare
+    bodyFreq: { min: 50, max: 500, default: 180 },
+    bodyDecay: { min: 0.01, max: 1.0, default: 0.18 },
+    noiseLen: { min: 0.01, max: 1.0, default: 0.22 },
+    filtEnvAmt: { min: 0, max: 5000, default: 2200 },
+    filtEnvTime: { min: 0.01, max: 0.5, default: 0.06 },
+    fmDepth: { min: 0, max: 200, default: 40 },
+    fmRate: { min: 0, max: 500, default: 120 },
+    ringNoiseAmt: { min: 0, max: 1, default: 0.25 },
+    // Kick
+    startFreq: { min: 20, max: 500, default: 140 },
+    endFreq: { min: 20, max: 200, default: 48 },
+    click: { min: 0, max: 0.1, default: 0.008 },
+  };
 
   function instrumentDefaults(t){
     const generic = {
@@ -216,6 +263,35 @@
   swingInput.addEventListener('input', updateSwingLabel);
   updateSwingLabel();
 
+  function handleModParamSelect(paramKey) {
+    const modTrack = tracks.find(t => t.isModSelectionMode);
+    if (!modTrack) return;
+
+    // Exit selection mode
+    modTrack.isModSelectionMode = false;
+    const trackUI = grid.querySelector(`.track[data-track="${modTrack.id}"]`);
+    const addModBtn = trackUI.querySelector('button'); // A bit fragile, might need a class
+    addModBtn.style.outline = '';
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('selectable-param'));
+
+    // Add new modulation if it doesn't exist
+    if (!modTrack.modulations[paramKey]) {
+      const info = paramInfo[paramKey];
+      const baseValue = modTrack.params[paramKey] ?? info.default;
+      const defaultValue = (baseValue - info.min) / (info.max - info.min);
+      modTrack.modulations[paramKey] = Array(32).fill(defaultValue);
+
+      // Update the track's UI
+      modTrack.currentModulationView = paramKey;
+      const el = grid.querySelector(`.track[data-track="${modTrack.id}"]`);
+      if (el) {
+        // Re-render the whole track UI to update dropdown and grid
+        const newEl = buildTrackUI(modTrack);
+        el.parentNode.replaceChild(newEl, el);
+      }
+    }
+  }
+
   // Build top per-track quick controls (+ choke group)
   function buildTopCard(track){
     const card = document.createElement('div');
@@ -233,6 +309,7 @@
       wrap.appendChild(input);
       if (unit){ const u = document.createElement('span'); u.textContent = unit; wrap.appendChild(u); }
       grid2.appendChild(wrap);
+      wrap.addEventListener('click', () => handleModParamSelect(key));
       return input;
     };
     const addRange = (label, key, min, max, step, wide=false) => {
@@ -241,7 +318,9 @@
       rng.min=min; rng.max=max; rng.step=step; rng.value=track.params[key];
       if (wide) rng.classList.add('wide');
       rng.addEventListener('input', ()=> track.params[key]=parseFloat(rng.value));
-      wrap.appendChild(rng); grid2.appendChild(wrap); return rng;
+      wrap.appendChild(rng); grid2.appendChild(wrap);
+      wrap.addEventListener('click', () => handleModParamSelect(key));
+      return rng;
     };
 
     addNum('Pitch','pitchSemis',-24,24,1,'st');
@@ -367,47 +446,103 @@
     loopSel.addEventListener('change', ()=> track.loopMode = loopSel.value);
     loopLabel.appendChild(loopSel); ctlRow.appendChild(loopLabel);
 
+    const modLabel = document.createElement('label'); modLabel.textContent = 'View';
+    const modSel = document.createElement('select');
+    for (const modName in track.modulations) {
+      const opt = document.createElement('option');
+      opt.value = modName;
+      opt.textContent = modName.charAt(0).toUpperCase() + modName.slice(1);
+      if (modName === track.currentModulationView) opt.selected = true;
+      modSel.appendChild(opt);
+    }
+    modSel.addEventListener('change', () => {
+      track.currentModulationView = modSel.value;
+      updateTrackGrid(el, track);
+    });
+    modLabel.appendChild(modSel); ctlRow.appendChild(modLabel);
+
+    const addModBtn = document.createElement('button');
+    addModBtn.textContent = '+M';
+    addModBtn.addEventListener('click', () => {
+      track.isModSelectionMode = !track.isModSelectionMode;
+      addModBtn.style.outline = track.isModSelectionMode ? '2px solid var(--hilite2)' : '';
+      document.querySelectorAll('.card').forEach(c => {
+        if (track.isModSelectionMode) {
+          c.classList.add('selectable-param');
+        } else {
+          c.classList.remove('selectable-param');
+        }
+      });
+    });
+    ctlRow.appendChild(addModBtn);
+
     head.appendChild(ctlRow);
     el.appendChild(head);
 
-    for (let r=0;r<32;r++){
-      const row = document.createElement('div'); row.className='row'; row.dataset.row=r;
-      const idx = document.createElement('div'); idx.className='idx'; idx.textContent=(r+1).toString().padStart(2,'0');
-      const cellOn = document.createElement('div'); cellOn.className='cell';
-      const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = (track.pattern[r] > 0);
-      cellOn.appendChild(cb);
+    const gridContent = document.createElement('div');
+    el.appendChild(gridContent);
 
-      const velCell = document.createElement('div'); velCell.className='cell';
-      const rng = document.createElement('input'); rng.type='range'; rng.min='0'; rng.max='1'; rng.step='0.01';
-      rng.value = track.pattern[r] || 0;
-      rng.className='vel';
-      if (!cb.checked) rng.disabled = true;
-      velCell.appendChild(rng);
+    function updateTrackGrid() {
+      gridContent.innerHTML = ''; // Clear previous grid
+      const currentMod = track.currentModulationView;
+      const modData = track.modulations[currentMod];
 
-      const velNum = document.createElement('div'); velNum.className='cell small';
-      const lbl = document.createElement('span');
-      lbl.textContent = Math.round((track.pattern[r]||0)*100).toString();
-      velNum.appendChild(lbl);
+      for (let r=0;r<32;r++){
+        const row = document.createElement('div'); row.className='row'; row.dataset.row=r;
+        const idx = document.createElement('div'); idx.className='idx'; idx.textContent=(r+1).toString().padStart(2,'0');
+        const cellOn = document.createElement('div'); cellOn.className='cell';
+        const cb = document.createElement('input'); cb.type='checkbox';
+        cb.checked = (track.modulations.velocity[r] > 0);
+        cellOn.appendChild(cb);
 
-      cb.addEventListener('change', ()=>{
-        if (cb.checked){
-          if (track.pattern[r] <= 0) { track.pattern[r] = 0.8; rng.value = 0.8; lbl.textContent='80'; }
-          rng.disabled = false;
-        } else {
-          track.pattern[r] = 0; rng.value = 0; rng.disabled = true; lbl.textContent='0';
-        }
-      });
-      rng.addEventListener('input', ()=>{
-        const v = parseFloat(rng.value);
-        track.pattern[r] = v;
-        lbl.textContent = Math.round(v*100).toString();
-        cb.checked = v > 0;
-        if (v === 0) rng.disabled = true;
-      });
+        const velCell = document.createElement('div'); velCell.className='cell';
+        const rng = document.createElement('input'); rng.type='range'; rng.min='0'; rng.max='1'; rng.step='0.01';
+        rng.value = modData[r] || 0;
+        rng.className='vel';
+        rng.disabled = !cb.checked;
+        velCell.appendChild(rng);
 
-      row.appendChild(idx); row.appendChild(cellOn); row.appendChild(velCell); row.appendChild(velNum);
-      el.appendChild(row);
+        const velNum = document.createElement('div'); velNum.className='cell small';
+        const lbl = document.createElement('span');
+        lbl.textContent = Math.round((modData[r]||0)*100).toString();
+        velNum.appendChild(lbl);
+
+        cb.addEventListener('change', ()=>{
+          rng.disabled = !cb.checked;
+          if (cb.checked) {
+            if (track.modulations.velocity[r] <= 0) {
+              track.modulations.velocity[r] = 0.8;
+              if (currentMod === 'velocity') {
+                rng.value = 0.8;
+                lbl.textContent = '80';
+              }
+            }
+          } else {
+            track.modulations.velocity[r] = 0;
+            if (currentMod === 'velocity') {
+              rng.value = 0;
+              lbl.textContent = '0';
+            }
+          }
+        });
+        rng.addEventListener('input', ()=>{
+          const v = parseFloat(rng.value);
+          modData[r] = v;
+          lbl.textContent = Math.round(v*100).toString();
+        });
+
+        row.appendChild(idx); row.appendChild(cellOn); row.appendChild(velCell); row.appendChild(velNum);
+        gridContent.appendChild(row);
+      }
+      updateDisabled();
     }
+
+    modSel.addEventListener('change', () => {
+      track.currentModulationView = modSel.value;
+      updateTrackGrid();
+    });
+
+    updateTrackGrid();
 
     function updateDisabled(){
       const rows = el.querySelectorAll('.row');
@@ -416,7 +551,7 @@
         const rng = row.querySelector('input[type="range"]');
         const dis = (idx>=track.patternLen);
         cb.disabled = dis;
-        rng.disabled = dis || !(track.pattern[idx] > 0);
+        rng.disabled = dis || !(track.modulations.velocity[idx] > 0);
       });
     }
     updateDisabled();
@@ -439,7 +574,7 @@
         const rng = row.querySelector('input[type="range"]');
         const dis = (idx>=track.patternLen);
         if (cb) cb.disabled = dis;
-        if (rng) rng.disabled = dis || !(track.pattern[idx] > 0);
+        if (rng) rng.disabled = dis || !(track.modulations.velocity[idx] > 0);
       });
     });
   }
@@ -492,7 +627,7 @@
       while (track.nextTime <= horizon){
         const idx = track.stepIndex;
         if (idx < track.patternLen){
-          const vel = Math.max(0, Math.min(1, track.pattern[idx]||0));
+          const vel = Math.max(0, Math.min(1, track.modulations.velocity[idx]||0));
           if (vel > 0){
             events.push({ when: track.nextTime, track, vel, group: track.params.chokeGroup||0 });
           }
@@ -655,8 +790,25 @@
     return {depth, rate, feedback};
   }
 
+  function applyModulations(track) {
+    const modulatedParams = { ...track.params };
+    const step = track.stepIndex;
+    for (const paramName in track.modulations) {
+      if (paramName === 'velocity') continue;
+      const modValue = track.modulations[paramName][step];
+      if (modValue === undefined || modValue === null) continue;
+
+      const info = paramInfo[paramName];
+      if (info) {
+        const scaledValue = info.min + modValue * (info.max - info.min);
+        modulatedParams[paramName] = scaledValue;
+      }
+    }
+    return modulatedParams;
+  }
+
   function playHat(track, when, isOpen, vel){
-    const p = track.params;
+    const p = applyModulations(track);
     const bus = audioCtx.createGain();
 
     const src = audioCtx.createBufferSource();
@@ -684,7 +836,7 @@
   }
 
   function playBell(track, when, vel){
-    const p = track.params;
+    const p = applyModulations(track);
     const mul = pitchMul(track);
     const dur = Math.min(p.decay, 6.0);
     const bus = audioCtx.createGain();
@@ -728,7 +880,7 @@
   }
 
   function playSnare(track, when, vel){
-    const p = track.params;
+    const p = applyModulations(track);
     const mul = pitchMul(track);
     const bus = audioCtx.createGain();
 
@@ -785,7 +937,7 @@
   }
 
   function playKick(track, when, vel){
-    const p = track.params;
+    const p = applyModulations(track);
     const mul = pitchMul(track);
     const bus = audioCtx.createGain();
 
