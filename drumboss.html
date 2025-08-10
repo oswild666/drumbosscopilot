@@ -154,6 +154,7 @@
       cutoff: 20000, resonance: 0.7,
       fmDepthG: 0, fmRateG: 0, fmFeedback: 0,
       rmAmt: 0, rmRate: 30, rmType: 'sine',
+      gain: 1.0,
       chokeGroup: t.chokeGroup ?? 0
     };
     switch(t.type){
@@ -243,6 +244,8 @@
     ringTypeWrap.appendChild(selRing);
     grid2.appendChild(ringTypeWrap);
 
+    addRange('Gain', 'gain', 0, 1.5, 0.01, true);
+
     // Choke group 0..5
     const chokeWrap = document.createElement('label'); chokeWrap.textContent='Choke grp';
     const sel = document.createElement('select');
@@ -299,7 +302,6 @@
         addNum('FM Depth', 'fmDepth', 0, 200, 5, '');
         addNum('FM Rate', 'fmRate', 0, 500, 5, 'Hz');
         addNum('Click', 'click', 0, 0.1, 0.001, 's');
-        addRange('Gain', 'gain', 0, 1.5, 0.01, true);
     }
 
     card.appendChild(grid2);
@@ -643,7 +645,7 @@
     const amp = audioCtx.createGain();
     const decay = Math.max(0.01, p.decay);
     amp.gain.setValueAtTime(0.0001, when);
-    amp.gain.linearRampToValueAtTime(0.9*p.tone*vel, when + 0.001);
+    amp.gain.linearRampToValueAtTime(0.9*p.tone*vel*p.gain, when + 0.001);
     amp.gain.exponentialRampToValueAtTime(0.0001, when + decay);
 
     src.connect(bp).connect(hp).connect(amp).connect(bus);
@@ -685,7 +687,7 @@
 
     const out = audioCtx.createGain();
     out.gain.setValueAtTime(0.0001, when);
-    out.gain.linearRampToValueAtTime(0.8*vel, when + 0.005);
+    out.gain.linearRampToValueAtTime(0.8*vel*p.gain, when + 0.005);
     out.gain.exponentialRampToValueAtTime(0.0001, when + dur);
 
     mod.connect(modGain).connect(car.frequency);
@@ -727,7 +729,7 @@
     const ringGain = audioCtx.createGain(); ringGain.gain.setValueAtTime(p.ringNoiseAmt*vel, when);
     const bodyAmp = audioCtx.createGain();
     bodyAmp.gain.setValueAtTime(0.0001, when);
-    bodyAmp.gain.linearRampToValueAtTime(0.8*vel, when + 0.002);
+    bodyAmp.gain.linearRampToValueAtTime(0.8*vel*p.gain, when + 0.002);
     bodyAmp.gain.exponentialRampToValueAtTime(0.0001, when + p.bodyDecay);
     const bias = audioCtx.createConstantSource(); bias.offset.setValueAtTime(0.7, when);
     bias.connect(bodyAmp.gain);
@@ -738,7 +740,7 @@
     const hp = audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.setValueAtTime(p.hpFreq, when); hp.Q.value=0.707;
     const nsGain = audioCtx.createGain();
     nsGain.gain.setValueAtTime(0.0001, when);
-    nsGain.gain.linearRampToValueAtTime(0.9*vel, when + 0.001);
+    nsGain.gain.linearRampToValueAtTime(0.9*vel*p.gain, when + 0.001);
     nsGain.gain.exponentialRampToValueAtTime(0.0001, when + p.noiseLen);
     bp.frequency.cancelScheduledValues(when);
     bp.frequency.setValueAtTime(p.bpFreq, when);
