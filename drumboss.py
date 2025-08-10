@@ -153,7 +153,7 @@
       pitchSemis: 0,
       cutoff: 20000, resonance: 0.7,
       fmDepthG: 0, fmRateG: 0, fmFeedback: 0,
-      rmAmt: 0, rmRate: 30,
+      rmAmt: 0, rmRate: 30, rmType: 'sine',
       chokeGroup: t.chokeGroup ?? 0
     };
     switch(t.type){
@@ -229,6 +229,20 @@
     addRange('Ring Amt','rmAmt',0,1,0.01,true);
     addNum('Ring Rate','rmRate',0.1,2000,0.1,'Hz');
 
+    const ringTypeWrap = document.createElement('label');
+    ringTypeWrap.textContent = 'Ring Type';
+    const selRing = document.createElement('select');
+    ['sine', 'square', 'sawtooth', 'triangle'].forEach(type => {
+        const opt = document.createElement('option');
+        opt.value = type;
+        opt.textContent = type;
+        selRing.appendChild(opt);
+    });
+    selRing.value = track.params.rmType || 'sine';
+    selRing.addEventListener('change', () => track.params.rmType = selRing.value);
+    ringTypeWrap.appendChild(selRing);
+    grid2.appendChild(ringTypeWrap);
+
     // Choke group 0..5
     const chokeWrap = document.createElement('label'); chokeWrap.textContent='Choke grp';
     const sel = document.createElement('select');
@@ -238,6 +252,55 @@
     sel.value = String(track.params.chokeGroup||0);
     sel.addEventListener('change', ()=> track.params.chokeGroup = parseInt(sel.value,10));
     chokeWrap.appendChild(sel); grid2.appendChild(chokeWrap);
+
+    // Instrument specific controls
+    const type = track.type;
+    if (type === 'hatC' || type === 'hatO') {
+        addNum('Decay', 'decay', 0.01, 2.0, 0.01, 's');
+        addNum('BP Freq', 'bpFreq', 1000, 15000, 100, 'Hz');
+        addNum('BP Q', 'bpQ', 0.1, 10, 0.1, '');
+        addNum('HP Freq', 'hpFreq', 1000, 15000, 100, 'Hz');
+        addRange('Tone', 'tone', 0.1, 1.0, 0.01, true);
+    } else if (type === 'bell') {
+        addNum('Freq', 'freq', 100, 2000, 10, 'Hz');
+        addNum('Ratio', 'ratio', 0.1, 5, 0.1, '');
+        addNum('Mod Index', 'modIndex', 10, 2000, 10, '');
+        addNum('Decay', 'decay', 0.1, 6.0, 0.1, 's');
+    } else if (type === 'snare') {
+        addNum('Body Freq', 'bodyFreq', 50, 500, 5, 'Hz');
+        addNum('Body Decay', 'bodyDecay', 0.01, 1.0, 0.01, 's');
+        addNum('Noise Len', 'noiseLen', 0.01, 1.0, 0.01, 's');
+        addNum('BP Freq', 'bpFreq', 500, 8000, 100, 'Hz');
+        addNum('BP Q', 'bpQ', 0.1, 10, 0.1, '');
+        addNum('HP Freq', 'hpFreq', 500, 8000, 100, 'Hz');
+        addNum('Filt Env Amt', 'filtEnvAmt', 0, 5000, 100, '');
+        addNum('Filt Env Time', 'filtEnvTime', 0.01, 0.5, 0.01, 's');
+        addNum('FM Depth', 'fmDepth', 0, 200, 5, '');
+        addNum('FM Rate', 'fmRate', 0, 500, 5, 'Hz');
+        addRange('Ring Noise', 'ringNoiseAmt', 0, 1, 0.01, true);
+    } else if (type === 'kick') {
+        const tierWrap = document.createElement('label');
+        tierWrap.textContent = 'Tier';
+        const tierSel = document.createElement('select');
+        ['Low', 'Mid', 'High'].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            tierSel.appendChild(opt);
+        });
+        tierSel.value = track.params.tier || 'Mid';
+        tierSel.addEventListener('change', () => track.params.tier = tierSel.value);
+        tierWrap.appendChild(tierSel);
+        grid2.appendChild(tierWrap);
+
+        addNum('Start Freq', 'startFreq', 20, 500, 10, 'Hz');
+        addNum('End Freq', 'endFreq', 20, 200, 5, 'Hz');
+        addNum('Decay', 'decay', 0.01, 1.0, 0.01, 's');
+        addNum('FM Depth', 'fmDepth', 0, 200, 5, '');
+        addNum('FM Rate', 'fmRate', 0, 500, 5, 'Hz');
+        addNum('Click', 'click', 0, 0.1, 0.001, 's');
+        addRange('Gain', 'gain', 0, 1.5, 0.01, true);
+    }
 
     card.appendChild(grid2);
     return card;
@@ -540,7 +603,7 @@
     // Ring modulation on final gain
     const amt = Math.max(0, Math.min(1, p.rmAmt||0));
     if (amt > 0){
-      const ring = audioCtx.createOscillator(); ring.type='sine';
+      const ring = audioCtx.createOscillator(); ring.type = p.rmType || 'sine';
       ring.frequency.setValueAtTime(Math.max(0.1, p.rmRate||30), when);
       const modGain = audioCtx.createGain(); modGain.gain.setValueAtTime(amt, when);
       const bias = audioCtx.createConstantSource(); bias.offset.setValueAtTime(1 - amt, when);
