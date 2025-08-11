@@ -750,8 +750,8 @@
   }
 
   // Channel FX: post lowpass + optional ring mod to out gain
-  function channelFX(track, when, stopAt){
-    const p = track.params;
+  function channelFX(params, when, stopAt){
+    const p = params;
     const lpf = audioCtx.createBiquadFilter();
     lpf.type='lowpass';
     lpf.frequency.setValueAtTime(Math.max(50, p.cutoff||20000), when);
@@ -826,7 +826,7 @@
     src.connect(bp).connect(hp).connect(amp).connect(bus);
 
     const stopAt = when + decay + 0.1;
-    const fx = channelFX(track, when, stopAt);
+    const fx = channelFX(p, when, stopAt);
     const voice = createVoiceGate(when, stopAt);
     bus.connect(voice.gate).connect(fx.in);
 
@@ -869,7 +869,7 @@
     car.connect(out).connect(bus);
 
     const stopAt = when + dur + 0.05;
-    const fx = channelFX(track, when, stopAt);
+    const fx = channelFX(p, when, stopAt);
     const voice = createVoiceGate(when, stopAt);
     bus.connect(voice.gate).connect(fx.in);
 
@@ -925,7 +925,7 @@
     ns.connect(bp).connect(hp).connect(nsGain).connect(bus);
 
     const stopAt = when + Math.max(p.bodyDecay, p.noiseLen) + 0.1;
-    const fx = channelFX(track, when, stopAt);
+    const fx = channelFX(p, when, stopAt);
     const voice = createVoiceGate(when, stopAt);
     bus.connect(voice.gate).connect(fx.in);
 
@@ -978,7 +978,7 @@
     osc.connect(amp).connect(out).connect(bus);
 
     const stopAt = when + Math.max(0.25, decay) + 0.05;
-    const fx = channelFX(track, when, stopAt);
+    const fx = channelFX(p, when, stopAt);
     const voice = createVoiceGate(when, stopAt);
     bus.connect(voice.gate).connect(fx.in);
 
