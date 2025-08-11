@@ -162,6 +162,7 @@
     // UI state for modulation
     isModSelectionMode: false,
     currentModulationView: 'velocity',
+    isMuted: false,
     // Instrument params + channel params + choke group
     params: instrumentDefaults(t)
   }));
@@ -476,6 +477,15 @@
     });
     ctlRow.appendChild(addModBtn);
 
+    const muteBtn = document.createElement('button');
+    muteBtn.textContent = 'Mute';
+    muteBtn.style.backgroundColor = track.isMuted ? 'var(--hilite2)' : '';
+    muteBtn.addEventListener('click', () => {
+      track.isMuted = !track.isMuted;
+      muteBtn.style.backgroundColor = track.isMuted ? 'var(--hilite2)' : '';
+    });
+    ctlRow.appendChild(muteBtn);
+
     head.appendChild(ctlRow);
     el.appendChild(head);
 
@@ -626,7 +636,7 @@
     tracks.forEach(track=>{
       while (track.nextTime <= horizon){
         const idx = track.stepIndex;
-        if (idx < track.patternLen){
+        if (idx < track.patternLen && !track.isMuted){
           const vel = Math.max(0, Math.min(1, track.modulations.velocity[idx]||0));
           if (vel > 0){
             events.push({ when: track.nextTime, track, vel, group: track.params.chokeGroup||0, stepIndex: idx });
