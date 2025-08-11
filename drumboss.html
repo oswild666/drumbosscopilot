@@ -629,7 +629,7 @@
         if (idx < track.patternLen){
           const vel = Math.max(0, Math.min(1, track.modulations.velocity[idx]||0));
           if (vel > 0){
-            events.push({ when: track.nextTime, track, vel, group: track.params.chokeGroup||0 });
+            events.push({ when: track.nextTime, track, vel, group: track.params.chokeGroup||0, stepIndex: idx });
           }
         }
         advanceStep(track);
@@ -678,7 +678,7 @@
     // Schedule accepted events with real-time choke of active tails
     accepted.forEach(e=>{
       if (e.group>0) chokeActive(e.group, e.when);
-      const voice = trigger(e.track, e.when, e.vel);
+      const voice = trigger(e.track, e.when, e.vel, e.stepIndex);
       if (e.group>0 && voice){
         voice.group = e.group;
         let arr = activeByGroup.get(e.group) || [];
@@ -739,13 +739,13 @@
   }
 
   // Trigger router: returns voice object (with gate + stopAt) for choke
-  function trigger(track, when, velocity=1){
+  function trigger(track, when, velocity=1, stepIndex){
     switch(track.type){
-      case 'hatC': return playHat(track, when, false, velocity);
-      case 'hatO': return playHat(track, when, true,  velocity);
-      case 'bell': return playBell(track, when, velocity);
-      case 'snare':return playSnare(track, when, velocity);
-      case 'kick': return playKick(track, when, velocity);
+      case 'hatC': return playHat(track, when, false, velocity, stepIndex);
+      case 'hatO': return playHat(track, when, true,  velocity, stepIndex);
+      case 'bell': return playBell(track, when, velocity, stepIndex);
+      case 'snare':return playSnare(track, when, velocity, stepIndex);
+      case 'kick': return playKick(track, when, velocity, stepIndex);
     }
   }
 
@@ -790,9 +790,9 @@
     return {depth, rate, feedback};
   }
 
-  function applyModulations(track) {
+  function applyModulations(track, stepIndex) {
     const modulatedParams = { ...track.params };
-    const step = track.stepIndex;
+    const step = stepIndex;
     for (const paramName in track.modulations) {
       if (paramName === 'velocity') continue;
       const modValue = track.modulations[paramName][step];
@@ -807,8 +807,8 @@
     return modulatedParams;
   }
 
-  function playHat(track, when, isOpen, vel){
-    const p = applyModulations(track);
+  function playHat(track, when, isOpen, vel, stepIndex){
+    const p = applyModulations(track, stepIndex);
     const bus = audioCtx.createGain();
 
     const src = audioCtx.createBufferSource();
@@ -835,8 +835,8 @@
     return voice;
   }
 
-  function playBell(track, when, vel){
-    const p = applyModulations(track);
+  function playBell(track, when, vel, stepIndex){
+    const p = applyModulations(track, stepIndex);
     const mul = pitchMul(p);
     const dur = Math.min(p.decay, 6.0);
     const bus = audioCtx.createGain();
@@ -879,8 +879,8 @@
     return voice;
   }
 
-  function playSnare(track, when, vel){
-    const p = applyModulations(track);
+  function playSnare(track, when, vel, stepIndex){
+    const p = applyModulations(track, stepIndex);
     const mul = pitchMul(p);
     const bus = audioCtx.createGain();
 
@@ -936,8 +936,8 @@
     return voice;
   }
 
-  function playKick(track, when, vel){
-    const p = applyModulations(track);
+  function playKick(track, when, vel, stepIndex){
+    const p = applyModulations(track, stepIndex);
     const mul = pitchMul(p);
     const bus = audioCtx.createGain();
 
