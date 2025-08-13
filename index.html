@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3aebu4CHORD</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Секвенсер (левая панель) -->
+        <div id="sequencer" class="animated-border">
+            <div id="modulation-track-controls">
+                <label for="mod-track-select">Modulation:</label>
+                <select id="mod-track-select">
+                    <option value="none">None</option>
+                </select>
+                <button id="delete-mod-track-btn">X</button>
+            </div>
+            <div id="pattern-container"></div>
+        </div>
+
+        <!-- Основной контент (правая панель) -->
+        <div id="main-content" class="animated-border">
+            <header id="app-header">
+                <div id="logo">
+                   <svg width="50" height="50" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 90C72.0914 90 90 72.0914 90 50C90 27.9086 72.0914 10 50 10C27.9086 10 10 27.9086 10 50C10 72.0914 27.9086 90 50 90Z" stroke="#FFD700" stroke-width="4"/>
+                        <path d="M40 30 L60 30 L55 70 L45 70 Z" fill="#FFD700" />
+                        <path d="M30 40 L70 40" stroke="#FFD700" stroke-width="4" />
+                        <path d="M50 20 L50 40" stroke="#FFD700" stroke-width="4" />
+                        <circle cx="40" cy="45" r="3" fill="white" />
+                        <circle cx="60" cy="45" r="3" fill="white" />
+                   </svg>
+                </div>
+                <h1>3aebu4CHORD</h1>
+            </header>
+
+            <div id="controls-toolbar">
+                <div class="control-group transport">
+                    <button id="play-pause-btn">PLAY</button>
+                    <button id="stop-btn">STOP</button>
+                    <button id="play-from-begin-btn">FROM BEGIN</button>
+                    <button id="rec-btn">REC</button>
+                </div>
+                <div class="control-group settings">
+                    <label for="bpm-input">BPM</label>
+                    <input type="number" id="bpm-input" value="120" min="20" max="300">
+                    <label for="pattern-size-input">SIZE</label>
+                    <input type="number" id="pattern-size-input" value="16" min="4" max="128">
+                    <label for="swing-select">SWING</label>
+                    <select id="swing-select">
+                        <option value="0">--</option>
+                        <option value="1/8">1/8</option>
+                        <option value="1/16">1/16</option>
+                        <option value="1/32">1/32</option>
+                    </select>
+                    <label for="loop-mode-btn">LOOP</label>
+                    <button id="loop-mode-btn">→</button>
+                </div>
+                <div class="control-group scale">
+                    <input type="checkbox" id="scale-lock-check">
+                    <label for="scale-lock-check">Scale Lock</label>
+                    <select id="scale-select" disabled>
+                        <option>Major</option>
+                        <option>Minor</option>
+                        <option>Dorian</option>
+                        <option>Mixolydian</option>
+                        <option>Lydian</option>
+                        <option>Phrygian</option>
+                        <option>Locrian</option>
+                    </select>
+                </div>
+                <div class="control-group sound-edit">
+                     <button id="edit-sound-btn">EDIT SOUND</button>
+                     <button id="add-mod-btn">+MOD</button>
+                </div>
+            </div>
+
+            <div id="synth-editor" class="hidden">
+                <div id="synth-controls-container">
+                    <!-- OSCILLATORS -->
+                    <div class="synth-group" id="oscillators-group">
+                        <h3>Oscillators</h3>
+                        <div class="osc-panel" data-osc="1">
+                            <h4>OSC 1</h4>
+                            <select class="osc-type"><option>sine</option><option>square</option><option>sawtooth</option><option>triangle</option></select>
+                            <label>Gain</label><input type="range" class="osc-gain" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                        <div class="osc-panel" data-osc="2">
+                            <h4>OSC 2</h4>
+                            <select class="osc-type"><option>sine</option><option>square</option><option>sawtooth</option><option>triangle</option></select>
+                            <label>Gain</label><input type="range" class="osc-gain" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                        <div class="osc-panel" data-osc="3">
+                            <h4>OSC 3</h4>
+                            <select class="osc-type"><option>sine</option><option>square</option><option>sawtooth</option><option>triangle</option></select>
+                            <label>Gain</label><input type="range" class="osc-gain" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                        <div class="osc-panel" data-osc="4">
+                            <h4>OSC 4</h4>
+                            <select class="osc-type"><option>sine</option><option>square</option><option>sawtooth</option><option>triangle</option></select>
+                            <label>Gain</label><input type="range" class="osc-gain" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                    </div>
+                    <!-- FILTERS -->
+                    <div class="synth-group" id="filters-group">
+                        <h3>Filters</h3>
+                        <div class="filter-panel" data-filter="1">
+                             <h4>Pre-Filter 1</h4>
+                             <label>Cutoff</label><input type="range" class="filter-freq" min="20" max="20000" step="1" value="8000">
+                             <label>Q</label><input type="range" class="filter-q" min="0.1" max="20" step="0.1" value="1">
+                        </div>
+                         <div class="filter-panel" data-filter="2">
+                             <h4>Post-Filter 1</h4>
+                             <label>Cutoff</label><input type="range" class="filter-freq" min="20" max="20000" step="1" value="100">
+                             <label>Q</label><input type="range" class="filter-q" min="0.1" max="20" step="0.1" value="1">
+                        </div>
+                    </div>
+                    <!-- LFOs & MODULATION -->
+                    <div class="synth-group" id="modulation-group">
+                        <h3>Modulation</h3>
+                        <!-- LFO controls will go here -->
+                        <!-- Ring Mod controls will go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
