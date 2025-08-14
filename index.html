@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macintosh JS-88 Synthesizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="synth-container" class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Macintosh JS-88 Synthesizer</div>
+            <div class="title-bar-controls">
+                <div class="button close"></div>
+            </div>
+        </div>
+        <div class="window-body">
+            <div id="global-controls" class="control-group">
+                <h2>Global</h2>
+                <div class="control">
+                    <label for="master-volume">Volume</label>
+                    <input type="range" id="master-volume" min="0" max="1" value="0.5" step="0.01">
+                </div>
+                <div class="adsr-group">
+                    <h3>Global ADSR</h3>
+                    <div class="control"><label for="global-attack">A</label><input type="range" id="global-attack" min="0" max="2" value="0.1" step="0.01"></div>
+                    <div class="control"><label for="global-decay">D</label><input type="range" id="global-decay" min="0" max="2" value="0.1" step="0.01"></div>
+                    <div class="control"><label for="global-sustain">S</label><input type="range" id="global-sustain" min="0" max="1" value="0.8" step="0.01"></div>
+                    <div class="control"><label for="global-release">R</label><input type="range" id="global-release" min="0" max="2" value="0.1" step="0.01"></div>
+                </div>
+            </div>
+
+            <div class="main-oscillators">
+                <div id="vco1-carrier" class="control-group">
+                    <h2>VCO 1 (Carrier)</h2>
+                    <div class="control">
+                        <label for="vco1-waveform">Waveform</label>
+                        <select id="vco1-waveform">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label for="vco1-pitch">Pitch</label>
+                        <input type="range" id="vco1-pitch" min="-24" max="24" value="0" step="1">
+                    </div>
+                    <div class="adsr-group">
+                        <h3>ADSR 1</h3>
+                        <div class="control"><label for="vco1-attack">A</label><input type="range" id="vco1-attack" min="0" max="2" value="0.1" step="0.01"></div>
+                        <div class="control"><label for="vco1-decay">D</label><input type="range" id="vco1-decay" min="0" max="2" value="0.1" step="0.01"></div>
+                        <div class="control"><label for="vco1-sustain">S</label><input type="range" id="vco1-sustain" min="0" max="1" value="0.8" step="0.01"></div>
+                        <div class="control"><label for="vco1-release">R</label><input type="range" id="vco1-release" min="0" max="2" value="0.1" step="0.01"></div>
+                    </div>
+                </div>
+
+                <div id="vco2-modulator" class="control-group">
+                    <h2>VCO 2 (Modulator - FM)</h2>
+                    <div class="control">
+                        <label for="vco2-waveform">Waveform</label>
+                        <select id="vco2-waveform">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                    </div>
+                     <div class="control">
+                        <label for="fm-amount">FM Amount</label>
+                        <input type="range" id="fm-amount" min="0" max="1000" value="0" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div id="detune-oscillators-section" class="control-group">
+                <h2>Detune Oscillators</h2>
+                <button id="add-detune-osc">Add Detune Oscillator</button>
+                <div id="detune-oscillators-container"></div>
+            </div>
+
+            <div id="fm-oscillators-section" class="control-group">
+                <h2>FM Oscillators</h2>
+                <button id="add-fm-osc">Add FM Oscillator</button>
+                <div id="fm-oscillators-container"></div>
+            </div>
+
+            <div id="keyboard">
+                <div class="octave">
+                    <div class="key" data-key="q"><span>Q</span><br>C3</div>
+                    <div class="key" data-key="w"><span>W</span><br>D3</div>
+                    <div class="key" data-key="e"><span>E</span><br>E3</div>
+                    <div class="key" data-key="r"><span>R</span><br>F3</div>
+                    <div class="key" data-key="t"><span>T</span><br>G3</div>
+                    <div class="key" data-key="y"><span>Y</span><br>A3</div>
+                    <div class="key" data-key="u"><span>U</span><br>B3</div>
+                </div>
+                <div class="octave">
+                    <div class="key" data-key="a"><span>A</span><br>C4</div>
+                    <div class="key" data-key="s"><span>S</span><br>D4</div>
+                    <div class="key" data-key="d"><span>D</span><br>E4</div>
+                    <div class="key" data-key="f"><span>F</span><br>F4</div>
+                    <div class="key" data-key="g"><span>G</span><br>G4</div>
+                    <div class="key" data-key="h"><span>H</span><br>A4</div>
+                    <div class="key" data-key="j"><span>J</span><br>B4</div>
+                </div>
+                <div class="octave">
+                    <div class="key" data-key="z"><span>Z</span><br>C5</div>
+                    <div class="key" data-key="x"><span>X</span><br>D5</div>
+                    <div class="key" data-key="c"><span>C</span><br>E5</div>
+                    <div class="key" data-key="v"><span>V</span><br>F5</div>
+                    <div class="key" data-key="b"><span>B</span><br>G5</div>
+                    <div class="key" data-key="n"><span>N</span><br>A5</div>
+                    <div class="key" data-key="m"><span>M</span><br>B5</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="synth.js"></script>
+</body>
+</html>
