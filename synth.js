@@ -22,6 +22,9 @@ const fmOscsContainer = document.getElementById('fm-oscillators-container');
 
 const keyboardKeys = document.querySelectorAll('.key');
 
+const midiInputsSelect = document.getElementById('midi-inputs');
+const midiStatus = document.getElementById('midi-status');
+
 // --- Audio Context ---
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 const masterGain = audioContext.createGain();
@@ -280,3 +283,90 @@ function addFmOsc() {
 
 addDetuneOscButton.addEventListener('click', addDetuneOsc);
 addFmOscButton.addEventListener('click', addFmOsc);
+
+// --- Web MIDI API ---
+let midiAccess = null;
+let activeMIDIInput = null;
+
+function onMIDISuccess(midi) {
+    midiAccess = midi;
+    midiStatus.textContent = '✓';
+    midiStatus.style.color = 'green';
+
+    const inputs = midiAccess.inputs.values();
+    let firstInput = null;
+
+    for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
+        if (!firstInput) firstInput = input.value;
+        const option = document.createElement('option');
+        option.value = input.value.id;
+        option.textContent = input.value.name;
+        midiInputsSelect.appendChild(option);
+    }
+
+    midiInputsSelect.firstChild.textContent = "Select a device...";
+
+    if (firstInput) {
+        midiInputsSelect.value = firstInput.id;
+        attachMIDIInput(firstInput.id);
+    }
+
+    midiAccess.onstatechange = (e) => {
+        if (e.port.type === 'input' && e.port.state === 'disconnected' && e.port.id === activeMIDIInput?.id) {
+             if(activeMIDIInput) activeMIDIInput.onmidimessage = null;
+             activeMIDIInput = null;
+             midiStatus.textContent = '✗';
+             midiStatus.style.color = 'red';
+        }
+        // Repopulate dropdown on change
+        // (Simplified for now, a more robust implementation would handle this better)
+    };
+}
+
+function onMIDIFailure(msg) {
+    console.error(`Failed to get MIDI access - ${msg}`);
+    midiStatus.textContent = '✗';
+    midiStatus.style.color = 'red';
+}
+
+function attachMIDIInput(deviceId) {
+    if (activeMIDIInput) {
+        activeMIDIInput.onmidimessage = null; // Remove listener from old device
+    }
+    const input = midiAccess.inputs.get(deviceId);
+    if (input) {
+        input.onmidimessage = handleMIDIMessage;
+        activeMIDIInput = input;
+    }
+}
+
+function handleMIDIMessage(event) {
+    const command = event.data[0] >> 4;
+    const note = event.data[1];
+    const velocity = event.data.length > 2 ? event.data[2] : 100; // a default velocity
+
+    if (command === 9 && velocity > 0) { // Note On
+        noteOn(note);
+        document.querySelectorAll(`.key`).forEach(k => {
+            if(keyToNote[k.dataset.key] === note) k.classList.add('active');
+        });
+
+    } else if (command === 8 || (command === 9 && velocity === 0)) { // Note Off
+        noteOff(note);
+         document.querySelectorAll(`.key`).forEach(k => {
+            if(keyToNote[k.dataset.key] === note) k.classList.remove('active');
+        });
+    }
+}
+
+midiInputsSelect.addEventListener('change', (e) => {
+    attachMIDIInput(e.target.value);
+});
+
+
+if (navigator.requestMIDIAccess) {
+    navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+} else {
+    console.warn('WebMIDI is not supported in this browser.');
+    midiInputsSelect.firstChild.textContent = "MIDI not supported";
+}

@@ -85,6 +85,18 @@ h2 {
     width: 20px;
 }
 
+#midi-status {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #888; /* Default gray */
+    margin-left: 15px;
+    border: 2px solid;
+    border-color: #555555 #fefefe #fefefe #555555;
+    box-shadow: 1px 1px 0 #000;
+}
+
 
 /* --- Buttons --- */
 button {
